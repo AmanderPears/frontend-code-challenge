@@ -1,7 +1,7 @@
 <template>
   <div>
     <label for="maxCP" class="max-cp">
-      <input type="checkbox" id="maxCP" />
+      <input type="checkbox" id="maxCP" v-model="sortByMaxCP" />
       <small> Maximum Combat Points </small>
     </label>
     <input
@@ -12,7 +12,7 @@
       v-model="query"
       v-on:click="fetchOnUserInput()"
     />
-    <div class="loader"></div>
+    <div class="loader" v-if="loadingJson"></div>
     <ul class="suggestions">
       <li v-if="filtered.length == 0">
         <img
@@ -72,14 +72,48 @@ export default {
     return {
       jsonData: null,
       query: "",
+      loadingJson: false,
+      sortByMaxCP: false
     };
   },
   computed: {
     filtered() {
       if (this.query != undefined && this.query.length > 0) {
-        return this.jsonData.filter((item) => {
+        // filter by name
+        let resultByName = this.jsonData.filter((item) => {
           return item["Name"].toLowerCase().includes(this.query.toLowerCase());
         });
+
+        //filter by type
+        let resultByType = this.jsonData.filter((item) => {
+          return item.Types.some((t) =>
+            t.toLowerCase().includes(this.query.toLowerCase())
+          );
+        });
+
+        //append filter by type after name
+        let result = resultByName.concat(resultByType);
+
+        //sort by maxcp if checked
+        if (this.sortByMaxCP) {
+          result.sort((a, b) => b.MaxCP - a.MaxCP);
+        }
+
+        //show only 4 results
+        result = result.slice(0, 4);
+
+        return result;
+
+        // return this.jsonData
+        //   .filter((item) => {
+        //     return (
+        //       item["Name"].toLowerCase().includes(this.query.toLowerCase()) ||
+        //       item.Types.some((t) =>
+        //         t.toLowerCase().includes(this.query.toLowerCase())
+        //       )
+        //     );
+        //   })
+        //   .slice(0, 4);
       } else {
         return [];
       }
@@ -94,11 +128,12 @@ export default {
   },
   methods: {
     fetchOnUserInput: function () {
+      this.loadingJson = true;
       fetch(URL_PATH)
         .then((res) => res.json())
         .then((data) => {
           this.jsonData = data;
-          console.log(data);
+          this.loadingJson = false;
         });
     },
 
